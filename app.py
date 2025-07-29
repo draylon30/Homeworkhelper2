@@ -4,25 +4,76 @@ from docx import Document
 from fpdf import FPDF
 import base64
 
-st.set_page_config(page_title="Web PDF Editor", layout="wide")
-st.title("📝 Web PDF Editor")
+# === CONFIGURATION ===
+st.set_page_config(
+    page_title="PDF Editor",
+    page_icon="📝",
+    layout="wide",
+)
 
-uploaded_pdf = st.file_uploader("Upload a PDF file", type="pdf")
-text_area = ""
+# === STYLE ===
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f5f7fa;
+    }
+    .block-container {
+        padding: 2rem 1rem;
+    }
+    h1 {
+        color: #1f4e79;
+    }
+    .stButton button {
+        background-color: #1f4e79;
+        color: white;
+        font-weight: bold;
+        border-radius: 8px;
+    }
+    .stTextArea textarea {
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# === TITLE ===
+st.title("📝 PDF Text Editor (Web App)")
+st.caption("Upload, edit, and export PDFs directly in your browser.")
+
+# === UPLOAD FILE ===
+uploaded_pdf = st.file_uploader(
+    "📤 Upload your PDF file (Max: 1000 MB)", 
+    type=["pdf"], 
+    accept_multiple_files=False,
+    label_visibility="visible"
+)
+
+# Force 1000MB max limit (Streamlit default is lower, but this forces warning for user)
+MAX_MB = 1000
+if uploaded_pdf and uploaded_pdf.size > MAX_MB * 1024 * 1024:
+    st.error("❌ File size exceeds 1000MB limit. Please upload a smaller file.")
+    uploaded_pdf = None
 
 if uploaded_pdf:
     doc = fitz.open(stream=uploaded_pdf.read(), filetype="pdf")
-    st.subheader("PDF Preview")
+    
+    st.subheader("📄 PDF Preview")
     for i, page in enumerate(doc):
-        st.image(page.get_pixmap().get_image(), caption=f"Page {i+1}")
+        st.image(page.get_pixmap().get_image(), caption=f"Page {i+1}", use_column_width=True)
 
+    # Extract text
     text_area = "\n".join(page.get_text() for page in doc)
-    edited_text = st.text_area("Edit Extracted Text", text_area, height=300)
+    st.subheader("✏️ Edit Text Extracted from PDF")
+    edited_text = st.text_area("Make changes here:", text_area, height=300)
 
+    st.divider()
+
+    # === EXPORT BUTTONS ===
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button("💾 Export to PDF"):
+        if st.button("💾 Export as PDF"):
             pdf = FPDF()
             pdf.add_page()
             pdf.set_font("Arial", size=12)
@@ -35,7 +86,7 @@ if uploaded_pdf:
                 st.markdown(href, unsafe_allow_html=True)
 
     with col2:
-        if st.button("📄 Export to Word"):
+        if st.button("📄 Export as Word (.docx)"):
             docx = Document()
             for line in edited_text.split('\n'):
                 docx.add_paragraph(line)
